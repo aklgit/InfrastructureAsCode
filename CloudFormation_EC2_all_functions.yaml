@@ -1,0 +1,58 @@
+---
+
+# Trying mapping concept and will use it in creating EC2 instance
+Mappings:
+  Regions:
+    us-east-1:
+      "64" : "ami-a4c7edb2"
+      "34" : "ami-dummyvalue"
+    us-east-2:
+      "32" : "ami-a4c7edb2"
+      "64" : "ami-dummyvalue"
+
+# Concept of parameters ,which will be used in reference below
+Parameters:
+  SecurityGroupDescription:
+    Description: Security Group Description
+    Type: String
+
+
+Resources:
+
+  # using the FindInMap function to utilize mapping 
+  # using Pseudo values - !Ref "AWS::Region" from AWS 
+
+  MyInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      AvailabilityZone: us-east-1a
+      ImageId: !FindInMap [Regions,!Ref "AWS::Region",64]
+      InstanceType: t2.micro
+      SecurityGroups:
+        - !Ref SSHSecurityGroup
+  
+  # using Fn:GetAtt to get the availability zone attribute from above My Instance resource and create EBS volume in that AZ
+  NewVolume:
+    Type: AWS::EC2::Volume
+    Properties:
+      Size: 100
+      AvailabilityZone: !GetAtt MyInstance.AvailabilityZone
+
+
+  # an elastic IP for our instance
+  MyEIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      InstanceId: !Ref MyInstance
+
+  # our EC2 security group
+  SSHSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: !Ref SecurityGroupDescription
+      SecurityGroupIngress:
+      - CidrIp: 0.0.0.0/0
+        FromPort: 22
+        IpProtocol: tcp
+        ToPort: 22
+
